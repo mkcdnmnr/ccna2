@@ -1,0 +1,162 @@
+
+| Prefix | Hextet | Hexadecimal | i   |
+| ---    | ---    | ---         | --- |
+| /32    |    2   |     4       |  1  |
+| /41    |    3   |     3       |  8  |         
+| /70    |    5   |     2       |  4  |
+| /7     |    1   |     2       |  2  |
+| /111   |    7   |     4       |  2  |
+| /124   |    8   |     3       |  1  |
+
+
+
+
+1. Subnet for 4 offices using the network address fd00:2:: /88
+
+
+Convert: 4 offices= 2 bits
+
+Add:/88 +2 bits= /90  (6th butas, 3rd hex, 4i)
+
+Ipasok sa butas si 4i, 4 times
+
+fd00:0002:0000:0000:0000:0000:0000:0000 /90 1st office
+                        :0040:2nd office
+                        :0080:
+                        :00C0:
+
+2nd Office
+Network:                  fd00:2::40:0:0/90
+- 1st Valid (+1 Net):     fd00:2::40:0:1
+- Last NonAny:            fd00:2::7f:ffff:ff7f
+- 1st Any IP:             fd00:2::7f:ffff:ff80
+- Last Any Ip (-1 Not):   fd00:2::7f:ffff:ffff
+Not Yours:                fd00:2::80:0:0/90
+
+
+2. Subnet for 52 offices using the network address fd00:3:0:33:: /112
+   Determin the  6th subnet
+
+Convert: 52 offices = 6 bits
+Add: /112+6= /118  (8th butas, 2nd hex, 4i)
+Ipasok: 4i sa butas 52 times but only until 6th subnet
+  fd00:0003:0000:0033:0000:0000:0000:0000  /118
+                                    :0400
+                                    :0800
+                                    :0c00
+                                    :1000
+                                    :1400-----6th subnet
+                                    :1800
+
+6th office:             fd00:3:0:33::1400 /118
+-1st valid (+1 network): fd00:3:0:33::1401
+-last non-any:           fd00:3:0:33::177f
+-1st anycast IP:         fd00:3:0:33::1780     
+-last anycast IP(-1 network) : fd00:3:0:33::17ff
+
+-not yours:     fd00:3:0:33::1800 /118
+
+------------------------------------------------------
+!@R4
+conf t
+ipv6 unicast-routing
+int e0/3
+no shut
+ipv6 add fd00:3:0:33::1401/118
+end
+
+
+!@R3
+conf t
+ipv6 unicast-routing
+int e0/3
+no shut
+ipv6 add fd00:3:0:33::17FF/118
+end
+ping fd00:3:0:33::1401
+
+
+!@R3
+conf t
+ipv6 unicast-routing
+int e0/3
+no shut
+no ipv6 add fd00:3:0:33::17FF/118
+ipv6 add fd00:3:0:33::177f/118
+end
+ping fd00:3:0:33::1401
+
+
+Reserved anycast is:
+	-Network address
+	-the last 128 address (:ff80: - :ffff:) on a /1 to /120
+
+
+------------------------------------------------
+
+Implement IPV6
+-MANUAL
+-EUI-64 >/64
+-SLAAC  >
+
+
+!@edge
+
+conf t
+ ipv6 unicast-routing
+ int g0/0/1
+  no shut
+  ipv6 add 2001:0:0:62::/64 eui-64
+end
+
+
+conf t
+ ipv6 unicast-routing
+ int g0/0/1
+  no shut
+  ipv6 add autoconfig
+end
+
+
+------------------------------------
+SWITCHING
+
+
+
+!@C1
+
+conf t
+ int range e0/0-3,e1/2-3
+   switch trunk encaps dot
+   switch mode trunk
+   switch trunk allow vlan all
+   switch trunk native vlan 1
+   end
+
+
+!@C2
+conf t
+ int range e0/0-3,e1/2-3
+   switchport trunk encaps dot
+   switch mode trunk
+   switch trunk allow vlan all
+   switch trunk native vlan 1
+   end
+
+!@A1
+conf t
+ int range e0/1-2,e1/0
+   switchport trunk encaps dot
+   switch mode trunk
+   switch trunk allow vlan all
+   switch trunk native vlan 1
+   end
+
+!@A2
+conf t
+ int range e0/0-3
+   switchport trunk encaps dot
+   switch mode trunk
+   switch trunk allow vlan all
+   switch trunk native vlan 1
+   end
